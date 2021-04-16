@@ -1,60 +1,58 @@
 const express = require("express");
-const exphbs = require("express-handlebars");
-const passport = require("passport");
-const dotenv = require("dotenv");
-const morgan = require("morgan");
-const routes = require("./routes/index");
-const authRoute = require("./routes/auth");
-
-const hbs = require("hbs");
-const path = require("path");
-const session = require("express-session");
-
+const expresslayout = require("express-ejs-layouts");
 const connectDb = require("./config/db");
-
-dotenv.config({ path: "./config/config.env" });
-
-require("./config/passport")(passport);
-
-passport;
-//conect db
-connectDb();
-
 const app = express();
+const path = require("path");
+const flash = require("connect-flash");
+const session = require("express-session");
+const passport = require("passport");
 
-////////////////////Middleware declaration//////////////////////////////////
-app.use(morgan("dev"));
+//Passport Config
+require('./config/passport')(passport);
 
-//////////////////////Handlebars////////////////////////////////////////
-app.engine(
-  "hbs",
-  exphbs({
-    defaultLayout: "main",
-    extname: ".hbs",
-  })
-);
-
-app.set("view engine", "hbs");
-///////////////////////////////////////////////////////////////////
-////////////////Passport middleware///////////////////////////////
+require("dotenv").config();
+connectDb();
+////////////Body Parser Middleware//////////////////////
+app.use(express.urlencoded({ extended: false }));
+///////////////////////////////////////////////////////////////
+//Static Webpage view
+app.use(express.static(path.join(__dirname, "public")));
+/////////////////////Express Session////////////////////////////
+//Maintain the user session across user request
 app.use(
   session({
     secret: "keyboard cat",
-    saveUninitialized: true,
-    cookie: { secure: true },
+    resave: true,
+    saveUninitialized: true
   })
 );
-
+/////////////////////////Passport Middleware////////////////////////////
 app.use(passport.initialize());
 app.use(passport.session());
-//Routes
-app.use("/", routes);
-app.use("/auth", authRoute);
+///////////////////////////////////////////////////////////////////////
+//Connect flash
+app.use(flash());
 
-//Serves static files (we need it to import a css file)
-app.use(express.static(path.join(__dirname, "public")));
+//Global vars
+app.use((req, res, next) => {
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg = req.flash('error_msg');
+  res.locals.error = req.flash('error');
+  next();
+});
+//////////////////View EJS MiddleWare///////////////////////////
+app.use(expresslayout);
+app.set("view engine", "ejs");
+////////////////////Passport Middleware/////////////////////////
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, function () {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+//////////////////Add the middleware///////////////////////////
+app.use("/", require("./routes/index"));
+app.use("/users", require("./routes/users"));
+
+const PORT = process.env.PORT || 5000;
+const mongooseport = process.env.MONGO_URI;
+
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
+  console.log(`Mongoose URI ${mongooseport}`);
 });

@@ -1,24 +1,17 @@
 const express = require("express");
+
 const router = express.Router();
 
-//@Desc login/landing page
-//@route GET /
+const { ensureAuthicated } = require("../config/auth");
+
 router.get("/", (req, res) => {
-  res.render("login", { layout: "login" });
+  res.render("welcome");
 });
 
-router.get("/dashboard", (req, res) => {
-  res.render("dashboard");
-});
-
-//@Desc Dashboard
-//@route GET /dashboard
-router.get("/dashboard", (req, res) => {
-  res.render("dashboard");
-});
-
-router.get("/something", (req, res) => {
-  res.send("Something");
+router.get("/dashboard", ensureAuthicated, (req, res) => {
+  res.render("dashboard", {
+    name: req.user.name,
+  });
 });
 
 module.exports = router;
